@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>بازی استراتژی جهان</title><style>
+*{box-sizing:border-box}body{margin:0;background:#0b1220;color:#e8eef8;font-family:Tahoma,Arial,sans-serif}header{padding:18px;background:#111c30;border-bottom:1px solid #26364f;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}h1{font-size:20px;margin:0}.muted{color:#9fb0c8;font-size:12px}.wrap{max-width:1100px;margin:auto;padding:16px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}.card{background:#121e32;border:1px solid #26364f;border-radius:14px;padding:15px}.card h2{font-size:16px;margin:0 0 12px}.row{display:flex;gap:8px;flex-wrap:wrap}input,select,button{font:inherit;border-radius:9px;border:1px solid #344965;padding:10px;background:#0b1628;color:#eef5ff;min-width:0}input,select{width:100%;margin:5px 0}button{background:#2456a6;border:0;cursor:pointer;margin:4px 0}button.secondary{background:#29384e}button.danger{background:#963d4b}.hidden{display:none}.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.stat{background:#0c1729;padding:10px;border-radius:10px}.stat b{display:block;font-size:17px;margin-top:5px}.list{max-height:220px;overflow:auto;font-size:13px}.item{padding:8px;border-bottom:1px solid #26364f;display:flex;justify-content:space-between;gap:8px}.notice{padding:10px;background:#172b48;border-radius:10px;margin:10px 0}.good{color:#70d6a1}.bad{color:#ff9b9b}
+</style></head><body>
+<header><div><h1>🌍 بازی استراتژی جهان</h1><div class="muted">دنیای مشترک چندنفره • نسخه آزمایشی وب</div></div><div id="status" class="muted">در حال اتصال...</div></header>
+<div class="wrap">
+<div id="auth" class="grid">
+<section class="card"><h2>ساخت حساب جدید</h2><input id="rname" placeholder="نام نمایشی"><input id="ruser" placeholder="نام کاربری (۳ تا ۲۰ حرف/عدد)"><input id="rpass" type="password" placeholder="رمز عبور (حداقل ۸ نویسه)"><button onclick="register()">ثبت‌نام و ورود</button></section>
+<section class="card"><h2>ورود بازیکن</h2><input id="luser" placeholder="نام کاربری"><input id="lpass" type="password" placeholder="رمز عبور"><button onclick="login()">ورود</button><div id="authmsg" class="muted"></div></section>
+</div>
+<div id="game" class="hidden">
+<div class="notice" id="hello"></div>
+<div class="grid">
+<section class="card"><h2>👤 کشور و پروفایل</h2><div id="stats" class="stats"></div><div id="countrybox"></div><button class="secondary" onclick="refresh()">به‌روزرسانی</button><button class="secondary" onclick="logout()">خروج</button></section>
+<section class="card"><h2>🛒 فروشگاه بازی</h2><select id="shopitem"></select><button onclick="buy()">خرید آیتم</button><div id="inventory" class="list"></div></section>
+<section class="card"><h2>⚔️ نبرد امتیازی و تصرف کشور</h2><select id="target"></select><button onclick="attack()">ثبت نبرد</button><div class="muted">نتیجه بر اساس امتیازهای داخل بازی محاسبه می‌شود.</div></section>
+<section class="card"><h2>💸 انتقال پول</h2><select id="transferTarget"></select><input id="transferAmount" type="number" min="1" placeholder="مبلغ"><button onclick="transfer()">انتقال</button></section>
+<section class="card"><h2>🤝 اتحادها</h2><input id="allianceName" placeholder="نام اتحاد جدید"><button onclick="alliance('create')">ساخت اتحاد</button><select id="allianceSelect"></select><div class="row"><button onclick="alliance('join')">عضویت</button><button class="secondary" onclick="alliance('leave')">خروج از اتحاد</button></div><div id="myall" class="muted"></div></section>
+<section class="card"><h2>🛢️ بازار نفت</h2><input id="oilqty" type="number" placeholder="تعداد بشکه برای فروش"><input id="oilprice" type="number" placeholder="قیمت هر بشکه"><button onclick="sellOil()">ثبت سفارش فروش</button><div id="orders" class="list"></div></section>
+<section class="card"><h2>🔐 مدیریت بازی</h2><input id="adminpass" type="password" placeholder="رمز مدیر"><button onclick="adminLogin()">ورود مدیر</button><div id="adminarea" class="hidden"><button onclick="toggleGame(false)" class="danger">غیرفعال کردن بازی</button><button onclick="toggleGame(true)">فعال کردن بازی</button><button class="secondary" onclick="adminPlayers()">فهرست بازیکنان</button><div id="adminplayers" class="list"></div></div></section>
+</div></div><div id="toast" class="notice hidden"></div></div>
+<script>
+// آدرس عمومی سرور Python را بین کوتیشن‌ها قرار بده.
+const API_BASE = 'https://procurement-does-apparatus-rules.trycloudflare.com';
+let S=null;const $=id=>document.getElementById(id);
+async function api(url,data){let r=await fetch(API_BASE+'/api/'+url,{method:data?'POST':'GET',credentials:'include',headers:data?{'Content-Type':'application/json'}:{},body:data?JSON.stringify(data):undefined});let j=await r.json();if(!r.ok)throw Error(j.error||'خطا');return j}
+function msg(t){$('toast').textContent=t;$('toast').classList.remove('hidden');setTimeout(()=>$('toast').classList.add('hidden'),4500)}
+async function status(){try{let s=await api('status');$('status').textContent=(s.active?'🟢 بازی فعال':'🔴 بازی غیرفعال')+' • '+s.players+' بازیکن'}catch(e){$('status').textContent='اتصال برقرار نشد'}}
+async function register(){try{await api('register',{name:$('rname').value,username:$('ruser').value,password:$('rpass').value});await refresh()}catch(e){$('authmsg').textContent=e.message}}
+async function login(){try{await api('login',{username:$('luser').value,password:$('lpass').value});await refresh()}catch(e){$('authmsg').textContent=e.message}}
+async function logout(){await api('logout',{});S=null;$('game').classList.add('hidden');$('auth').classList.remove('hidden');status()}
+async function refresh(){try{S=await api('state');$('auth').classList.add('hidden');$('game').classList.remove('hidden');render()}catch(e){$('auth').classList.remove('hidden');$('game').classList.add('hidden');$('authmsg').textContent=e.message}}
+function opt(arr,label){return arr.map(x=>`<option value="${x.id}">${label(x)}</option>`).join('')}
+function render(){let p=S.player;$('hello').textContent='خوش آمدی '+p.display_name+'؛ '+(p.country||'هنوز کشوری انتخاب نکرده‌ای');$('stats').innerHTML=[['کشور',p.country||'ندارد'],['پول',p.money.toLocaleString()+' $'],['نفت',p.oil.toLocaleString()],['سلامتی',p.health+'٪'],['حملات',p.attacks],['تصرف‌ها',p.captured]].map(x=>`<div class="stat">${x[0]}<b>${x[1]}</b></div>`).join('');
+$('countrybox').innerHTML=p.country?'کشور ثبت شده: '+p.country:`<select id="country"><option value="">انتخاب کشور آزاد</option>${S.countries.map(c=>`<option>${c}</option>`).join('')}</select><button onclick="chooseCountry()">انتخاب کشور</button>`;
+$('shopitem').innerHTML=Object.entries(S.shop).map(([k,v])=>`<option value="${k}">${v.name} — ${v.price.toLocaleString()}$</option>`).join('');
+$('inventory').innerHTML='<b>موجودی:</b>'+ (S.inventory.map(x=>`<div class="item">${S.shop[x.item]?.name||x.item}<b>${x.qty}</b></div>`).join('')||'<div class="muted">خالی</div>');
+let targets=S.players.filter(x=>x.country);$('target').innerHTML=opt(targets,x=>`${x.display_name} — ${x.country}`);$('transferTarget').innerHTML=opt(S.players,x=>x.display_name+' (#'+x.id+')');
+$('allianceSelect').innerHTML=opt(S.alliances,x=>x.name+' ('+x.members+' عضو)');$('myall').textContent=S.my_alliance?'عضو اتحاد: '+S.my_alliance.name:'عضو اتحادی نیستی';
+$('orders').innerHTML=S.orders.map(x=>`<div class="item">#${x.id} • ${x.seller} • ${x.qty} بشکه • هرکدام ${x.price.toLocaleString()}$ <button onclick="buyOil(${x.id})">خرید</button></div>`).join('')||'سفارشی نیست';
+}
+async function chooseCountry(){try{await api('country',{country:$('country').value});await refresh()}catch(e){msg(e.message)}}
+async function buy(){try{await api('buy',{item:$('shopitem').value});msg('خرید انجام شد');await refresh()}catch(e){msg(e.message)}}
+async function attack(){try{let r=await api('attack',{target:$('target').value});msg(r.message);await refresh()}catch(e){msg(e.message)}}
+async function transfer(){try{await api('transfer',{target:$('transferTarget').value,amount:+$('transferAmount').value});msg('انتقال انجام شد');await refresh()}catch(e){msg(e.message)}}
+async function alliance(action){try{let d={action};if(action==='create')d.name=$('allianceName').value;if(action==='join')d.id=$('allianceSelect').value;await api('alliance',d);msg('درخواست انجام شد');await refresh()}catch(e){msg(e.message)}}
+async function sellOil(){try{await api('oil/sell',{qty:+$('oilqty').value,price:+$('oilprice').value});msg('سفارش ثبت شد');await refresh()}catch(e){msg(e.message)}}
+async function buyOil(id){try{await api('oil/buy',{id});msg('خرید نفت انجام شد');await refresh()}catch(e){msg(e.message)}}
+async function adminLogin(){try{await api('admin/login',{password:$('adminpass').value});$('adminarea').classList.remove('hidden');msg('ورود مدیر موفق بود')}catch(e){msg(e.message)}}
+async function toggleGame(active){try{await api('admin/toggle',{active});msg(active?'بازی فعال شد':'بازی غیرفعال شد');status()}catch(e){msg(e.message)}}
+async function adminPlayers(){try{let r=await api('admin/players');$('adminplayers').innerHTML=r.players.map(p=>`<div class="item">#${p.id} ${p.display_name} • ${p.country||'بدون کشور'} <button class="danger" onclick="ban(${p.id},${!p.banned})">${p.banned?'رفع مسدودی':'مسدود'}</button></div>`).join('')}catch(e){msg(e.message)}}
+async function ban(id,banned){try{await api('admin/ban',{id,banned});adminPlayers()}catch(e){msg(e.message)}}
+status();refresh();setInterval(status,10000);setInterval(()=>{if(S)refresh()},15000);
+</script></body></html>
